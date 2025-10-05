@@ -1,0 +1,248 @@
+name: 'Pynt Security Testing'
+description: 'Run Pynt API security testing with Newman or custom test commands'
+author: 'Pynt'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  mode:
+    description: 'Pynt mode to run: "newman" or "command"'
+    required: true
+
+  pynt-id:
+    description: 'Pynt ID for authentication (defaults to secrets.PYNT_ID if not provided)'
+    required: false
+
+  # Newman mode specific inputs
+  collection:
+    description: '[Newman mode] Path to Postman collection file'
+    required: false
+
+  environment:
+    description: '[Newman mode] Path to Postman environment file(s), comma-separated for multiple'
+    required: false
+
+  newman-env-var:
+    description: '[Newman mode] Environment variables for Newman, comma-separated (e.g., "VAR1=value1,VAR2=value2")'
+    required: false
+
+  # Command mode specific inputs
+  command:
+    description: '[Command mode] The command that runs your functional tests'
+    required: false
+
+  # Optional inputs for both modes
+  application-name:
+    description: 'Associate scan with a specific application (creates application if it does not exist)'
+    required: false
+
+  severity-level:
+    description: 'Control error code on findings: all, medium, high, critical, none (default: none - no error on findings)'
+    required: false
+    default: 'none'
+
+  tags:
+    description: 'Comma-separated tags to add to the scan'
+    required: false
+
+  report-path:
+    description: 'Path to save the generated report'
+    required: false
+
+  host-ca:
+    description: 'Path to CA file in PEM format for SSL verification'
+    required: false
+
+  tls-client-cert:
+    description: '[Newman mode] Path to client certificate for mTLS'
+    required: false
+
+  tls-client-key:
+    description: '[Newman mode] Path to client private key for mTLS'
+    required: false
+
+  allow-errors:
+    description: '[Command mode] Continue execution if command fails (true/false)'
+    required: false
+    default: 'false'
+
+  insecure:
+    description: '[Command mode] Use for self-signed certificates (true/false)'
+    required: false
+    default: 'false'
+
+  no-proxy-export:
+    description: '[Command mode] Prevent Pynt from exporting proxy settings to environment (useful for Selenium/UI tests) (true/false)'
+    required: false
+    default: 'false'
+
+  verbose:
+    description: 'Get more detailed run information (true/false)'
+    required: false
+    default: 'false'
+
+outputs:
+  report-path:
+    description: 'Path to the generated security report'
+    value: ${{ steps.pynt.outputs.report-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        PYNT_ID: ${{ inputs.pynt-id }}
+      run: |
+        if [ -z "$PYNT_ID" ]; then
+          echo "Error: PYNT_ID is not set. Please provide it via the 'pynt-id' input or set it as a GitHub secret named 'PYNT_ID'"
+          exit 1
+        fi
+
+        if [ "${{ inputs.mode }}" != "newman" ] && [ "${{ inputs.mode }}" != "command" ]; then
+          echo "Error: mode must be either 'newman' or 'command'"
+          exit 1
+        fi
+
+        if [ "${{ inputs.mode }}" == "newman" ] && [ -z "${{ inputs.collection }}" ]; then
+          echo "Error: collection is required for newman mode"
+          exit 1
+        fi
+
+        if [ "${{ inputs.mode }}" == "command" ] && [ -z "${{ inputs.command }}" ]; then
+          echo "Error: command is required for command mode"
+          exit 1
+        fi
+
+    - name: Install Pynt Binary
+      shell: bash
+      run: |
+        echo "Installing Pynt Binary..."
+        wget -q https://cdn.pynt.io/binary-release/install.sh
+        chmod +x install.sh
+        ./install.sh
+
+        # Verify installation
+        if [ -f "$HOME/.pynt/bin/pynt" ]; then
+          echo "Pynt binary installed successfully"
+          pynt --version || echo "Pynt binary is ready"
+        else
+          echo "Error: Pynt binary installation failed"
+          exit 1
+        fi
+
+    - name: Run Pynt Newman
+      if: inputs.mode == 'newman'
+      id: pynt-newman
+      shell: bash
+      env:
+        PYNT_ID: ${{ inputs.pynt-id }}
+      run: |
+        CMD="pynt newman --collection ${{ inputs.collection }}"
+
+        if [ -n "${{ inputs.environment }}" ]; then
+          IFS=',' read -ra ENVS <<< "${{ inputs.environment }}"
+          for env in "${ENVS[@]}"; do
+            CMD="$CMD --environment $env"
+          done
+        fi
+
+        if [ -n "${{ inputs.newman-env-var }}" ]; then
+          IFS=',' read -ra VARS <<< "${{ inputs.newman-env-var }}"
+          for var in "${VARS[@]}"; do
+            CMD="$CMD --newman-env-var $var"
+          done
+        fi
+
+        if [ -n "${{ inputs.application-name }}" ]; then
+          CMD="$CMD --application-name '${{ inputs.application-name }}'"
+        fi
+
+        if [ -n "${{ inputs.severity-level }}" ]; then
+          CMD="$CMD --severity-level ${{ inputs.severity-level }}"
+        fi
+
+        if [ -n "${{ inputs.tags }}" ]; then
+          IFS=',' read -ra TAGS <<< "${{ inputs.tags }}"
+          for tag in "${TAGS[@]}"; do
+            CMD="$CMD --tag $tag"
+          done
+        fi
+
+        if [ -n "${{ inputs.report-path }}" ]; then
+          CMD="$CMD --report ${{ inputs.report-path }}"
+          echo "report-path=${{ inputs.report-path }}" >> $GITHUB_OUTPUT
+        fi
+
+        if [ -n "${{ inputs.host-ca }}" ]; then
+          CMD="$CMD --host-ca ${{ inputs.host-ca }}"
+        fi
+
+        if [ -n "${{ inputs.tls-client-cert }}" ]; then
+          CMD="$CMD --tls-client-cert ${{ inputs.tls-client-cert }}"
+        fi
+
+        if [ -n "${{ inputs.tls-client-key }}" ]; then
+          CMD="$CMD --tls-client-key ${{ inputs.tls-client-key }}"
+        fi
+
+        if [ "${{ inputs.verbose }}" == "true" ]; then
+          CMD="$CMD --verbose"
+        fi
+
+        echo "Running: $CMD"
+        eval $CMD
+
+    - name: Run Pynt Command
+      if: inputs.mode == 'command'
+      id: pynt-command
+      shell: bash
+      env:
+        PYNT_ID: ${{ inputs.pynt-id }}
+      run: |
+        CMD="pynt command --cmd '${{ inputs.command }}'"
+
+        if [ -n "${{ inputs.application-name }}" ]; then
+          CMD="$CMD --application-name '${{ inputs.application-name }}'"
+        fi
+
+        if [ -n "${{ inputs.severity-level }}" ]; then
+          CMD="$CMD --severity-level ${{ inputs.severity-level }}"
+        fi
+
+        if [ -n "${{ inputs.tags }}" ]; then
+          IFS=',' read -ra TAGS <<< "${{ inputs.tags }}"
+          for tag in "${TAGS[@]}"; do
+            CMD="$CMD --tag $tag"
+          done
+        fi
+
+        if [ -n "${{ inputs.report-path }}" ]; then
+          CMD="$CMD --report ${{ inputs.report-path }}"
+          echo "report-path=${{ inputs.report-path }}" >> $GITHUB_OUTPUT
+        fi
+
+        if [ -n "${{ inputs.host-ca }}" ]; then
+          CMD="$CMD --host-ca ${{ inputs.host-ca }}"
+        fi
+
+        if [ "${{ inputs.allow-errors }}" == "true" ]; then
+          CMD="$CMD --allow-errors"
+        fi
+
+        if [ "${{ inputs.insecure }}" == "true" ]; then
+          CMD="$CMD --insecure"
+        fi
+
+        if [ "${{ inputs.no-proxy-export }}" == "true" ]; then
+          CMD="$CMD --no-proxy-export"
+        fi
+
+        if [ "${{ inputs.verbose }}" == "true" ]; then
+          CMD="$CMD --verbose"
+        fi
+
+        echo "Running: $CMD"
+        eval $CMD

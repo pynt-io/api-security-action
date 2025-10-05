@@ -1,0 +1,48 @@
+{
+  "info": {
+    "name": "Test API Collection",
+    "description": "Simple test collection for Pynt GitHub Action",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Users",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://jsonplaceholder.typicode.com/users",
+          "protocol": "https",
+          "host": ["jsonplaceholder", "typicode", "com"],
+          "path": ["users"]
+        }
+      }
+    },
+    {
+      "name": "Get Posts",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://jsonplaceholder.typicode.com/posts",
+          "protocol": "https",
+          "host": ["jsonplaceholder", "typicode", "com"],
+          "path": ["posts"]
+        }
+      }
+    },
+    {
+      "name": "Get User by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://jsonplaceholder.typicode.com/users/1",
+          "protocol": "https",
+          "host": ["jsonplaceholder", "typicode", "com"],
+          "path": ["users", "1"]
+        }
+      }
+    }
+  ]
+}

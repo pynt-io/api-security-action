@@ -1,0 +1,22 @@
+name: Test Pynt Newman
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  test-newman:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Pynt Newman Test
+        uses: ./
+        with:
+          mode: newman
+          pynt-id: ${{ secrets.PYNT_ID }}
+          collection: ./test/postman/test-collection.json
+          application-name: "Test Application"

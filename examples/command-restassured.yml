@@ -1,0 +1,42 @@
+name: Pynt with RestAssured Security Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  api-security-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run Pynt Security Scan
+        uses: pynt-io/api-security-action@v1
+        with:
+          mode: command
+          pynt-id: ${{ secrets.PYNT_ID }}
+          command: "mvn clean test -Dtest=ApiSecurityTests"
+          test-name: "RestAssured API Security Scan"
+          application-name: "Java API Service"
+          severity-level: high
+          tags: "restassured,java,api"
+          report-path: ./target/pynt-report.json
+
+      - name: Upload Security Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pynt-security-report
+          path: ./target/pynt-report.json
+          retention-days: 30

@@ -1,0 +1,46 @@
+name: Pynt with Pytest Security Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  api-security-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Pynt Security Scan
+        uses: pynt-io/api-security-action@v1
+        with:
+          mode: command
+          pynt-id: ${{ secrets.PYNT_ID }}
+          command: "pytest tests/api_tests.py -v --tb=short"
+          test-name: "Pytest API Security Scan"
+          application-name: "My API Service"
+          severity-level: medium
+          tags: "pytest,api,ci"
+          report-path: ./pynt-report.json
+
+      - name: Upload Security Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pynt-security-report
+          path: ./pynt-report.json
+          retention-days: 30

@@ -1,0 +1,26 @@
+name: Pynt Newman Security Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  api-security-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Pynt Security Scan
+        uses: pynt-io/api-security-action@v1
+        with:
+          mode: newman
+          pynt-id: ${{ secrets.PYNT_ID }}
+          collection: ./postman/api-collection.json
+          environment: ./postman/environment.json
+          test-name: "API Security Scan - ${{ github.ref_name }}"
+          severity-level: all
+          tags: "api,security,ci"

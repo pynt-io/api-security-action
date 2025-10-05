@@ -1,0 +1,23 @@
+name: Test Pynt with crAPI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-crapi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Pynt with crAPI
+        uses: ./
+        with:
+          mode: newman
+          pynt-id: ${{ secrets.PYNT_ID }}
+          collection: ./test/crapi/crAPI.postman_collection.json
+          environment: ./test/crapi/crAPI.postman_environment.json
+          application-name: "crAPI Security Test"
+          tags: "crapi,owasp,security"
+          severity-level: none

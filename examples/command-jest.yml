@@ -1,0 +1,45 @@
+name: Pynt with Jest Security Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  api-security-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Pynt Security Scan
+        uses: pynt-io/api-security-action@v1
+        with:
+          mode: command
+          pynt-id: ${{ secrets.PYNT_ID }}
+          command: "npm test -- --coverage"
+          test-name: "Jest API Security Scan"
+          application-name: "Node.js API Service"
+          severity-level: high
+          tags: "jest,javascript,api"
+          allow-errors: false
+          verbose: true
+
+      - name: Upload Security Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pynt-security-report
+          path: ./pynt-report.json
+          retention-days: 30

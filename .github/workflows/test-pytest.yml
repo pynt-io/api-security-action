@@ -1,0 +1,31 @@
+name: Test Pynt with Pytest
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-pytest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pytest requests
+
+      - name: Run Pynt with Pytest
+        uses: ./
+        with:
+          mode: command
+          pynt-id: ${{ secrets.PYNT_ID }}
+          command: "pytest test/pytest/goat_functional_test.py -v"
+          application-name: "GOAT API - Pytest"
+          tags: "pytest,goat,api"
+          severity-level: none
