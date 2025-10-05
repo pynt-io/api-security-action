@@ -1,4 +1,12 @@
-# Pynt GitHub Action
+<div align="center">
+  <img src="https://cdn.prod.website-files.com/6357c772bd0a59790d6cfdf5/678a156ed7dfe8140e06084e_Pynt-logo.svg" alt="Pynt Logo" width="200"/>
+
+  # Pynt API Security Action
+
+  [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Pynt%20API%20Security-blue.svg)](https://github.com/marketplace/actions/pynt-api-security-action)
+</div>
+
+---
 
 Run [Pynt](https://pynt.io) API security testing in your GitHub workflows using the Pynt Linux binary. This action supports two modes:
 - **Newman mode**: Security testing with Postman collections
